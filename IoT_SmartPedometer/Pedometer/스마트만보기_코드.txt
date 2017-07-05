@@ -1,0 +1,176 @@
+#include <SPI.h>
+#include <WiFi.h>
+#include <TinyGPS.h>
+#include <Wire.h>
+#include <OzOLED.h>
+#include "U8glib.h"
+#include <TimerThree.h>
+
+char ssid[] = "G2_3711";   
+char pass[] = "12345678";
+int keyIndex = 0;            
+
+int status = WL_IDLE_STATUS;
+
+WiFiClient client;
+
+char server[] = "kic0326.dothome.co.kr";
+
+String p = "GET /dbconfig.php?latitude=";
+String p2 = "&longitude=";
+String p3 = "&course=";
+String p4 = " HTTP/1.1";
+
+TinyGPS gps;
+float flat = 0.0, flon = 0.0, fspeed = 0.0, fcourse = 0.0;
+
+U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE);
+
+volatile long cnt = 0, steps = 0, second = 0, second2 = 0, minute = 0;
+volatile float cal = 0.0;
+
+const int sensor = 13;
+
+void setup() {
+
+  OzOled.init();
+  
+  pinMode(sensor, INPUT_PULLUP);
+
+  Serial.begin(115200);
+  Serial1.begin(9600);
+  
+  while ( status != WL_CONNECTED) {
+    Serial.print("Attempting to connect to SSID: ");
+    Serial.println(ssid);
+    status = WiFi.begin(ssid, pass);
+    delay(10000);
+  }
+  
+  Timer3.initialize(1000000);
+  Timer3.attachInterrupt(callback);
+}
+
+void loop() {
+
+  while (client.available()) {
+    char c = client.read();
+    Serial.write(c);
+  }
+  
+  if( digitalRead(sensor) == HIGH){
+    digitalWrite(sensor, LOW);
+    steps++;
+  }
+  digitalWrite(sensor, LOW);
+  
+  bool newData = false;
+  unsigned long chars;
+  unsigned short sentences, failed;
+
+  for (unsigned long start = millis(); millis() - start < 120;)
+  {
+    while (Serial1.available())
+    {
+      char c = Serial1.read();
+      if (gps.encode(c))
+        newData = true;
+    }
+  }
+  if(newData)
+  {
+    unsigned long age;
+    gps.f_get_position(&flat, &flon, &age);
+    fspeed = gps.f_speed_kmph();
+    fcourse = gps.f_course();
+    Serial.print("LAT=");
+    Serial.print(flat == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flat, 6);
+    Serial.print(" LON=");
+    Serial.print(flon == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flon, 6);
+  }
+  gps.stats(&chars, &sentences, &failed);
+  Serial.print(" CHARS=");
+  Serial.print(chars);
+  Serial.print(" SENTENCES=");
+  Serial.print(sentences);
+  Serial.print(" CSUM ERR=");
+  Serial.println(failed);
+  
+  if (chars == 0){
+    Serial.println("** No characters received from GPS: check wiring **");
+  }
+  
+  OzOled.printString("Time  :", 0, 0); 
+  if(minute < 10){
+    OzOled.printNumber(0.0, 0, 8, 0);  
+    OzOled.printNumber(minute, 9, 0); 
+  }
+  else{
+    OzOled.printNumber(minute, 8, 0); 
+  }
+  OzOled.printString(" : ", 10, 0); 
+  if(second < 10){
+    OzOled.printNumber(0.0, 0, 13, 0);
+    OzOled.printNumber(second, 14, 0);   
+  }
+  else{
+    OzOled.printNumber(second, 13, 0); 
+  }
+  OzOled.printString("Steps :", 0, 2); 
+  OzOled.printNumber(steps, 8, 2);
+  OzOled.printString("Speed :", 0, 4); 
+  OzOled.printNumber(fspeed, 2, 8, 4); 
+  OzOled.printString("km/h", 12, 4);
+  OzOled.printString("Cal   :", 0, 6);
+  OzOled.printNumber(cal, 2, 8, 6); 
+}
+
+void httpRequest() {
+  client.stop();
+
+  if(client.connect(server, 80)){
+    Serial.println("connecting...");
+    client.print(p);
+    client.print(flat, 6);
+    client.print(p2);
+    client.print(flon, 6);
+    client.print(p3);
+    client.print(fcourse);
+    client.println(p4); 
+    client.println("Host: kic0326.dothome.co.kr");
+    client.println("User-Agent: ArduinoWiFi/1.1");
+    client.println("Connection: close");
+    client.println();
+  }
+}
+
+void callback()
+{
+  Serial.println(second);
+  cnt++;
+  if(fspeed > 0){
+    if(fspeed <= 130.0)
+      cal = 0.00175 * (( 0.1 * fspeed + 3.5) / 3.5) * 60 * second2;
+    else if(fspeed > 130.0)
+      cal = 0.00175 * (( 0.2 * fspeed + 3.5) / 3.5) * 60 * second2;
+  }
+  else{
+    fspeed = fspeed;
+  }
+  if(cnt % 1 == 0){
+    second++;
+    second2++;  
+  }
+  if(second % 10 == 0 && cnt > 0){
+    httpRequest();
+  }
+  if(second % 60 == 0){
+    second = 0;
+  }
+  if(cnt % 60 == 0){
+    minute++;
+  }
+  if(minute % 60 == 0){
+    minute = 0;
+  }
+}

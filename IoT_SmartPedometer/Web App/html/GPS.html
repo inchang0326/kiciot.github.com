@@ -1,0 +1,71 @@
+<?php include "header.php" ?>
+
+<?php
+	if(!$_SESSION['login_id']):
+	header('location:/index.html?err=1');
+?>
+<?php else:
+?>
+<?php endif; ?>
+
+<?php
+header("Content-Type: text/html; charset=UTF-8");
+
+$host = "mysql:host=localhost;dbname=kic0326";
+$user = "kic0326";
+$password= "awds1329";
+$conn = new PDO($host, $user, $password, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));;
+
+$stmt = $conn->prepare('SELECT * FROM gps');
+$stmt->execute();
+$list = $stmt->fetchAll();
+
+foreach($list as $gps){
+	$latitude = $gps['latitude'];
+	$longitude = $gps['longitude'];
+}
+
+?>
+<!DOCTYPE html>
+<html lang="ko">
+	<head>
+		<style>
+			#map{
+				margin:15px auto;
+			}
+		</style>
+		<meta charset="UTF-8">
+		<meta http-equiv=refresh content="5,/GPS.html">
+		<title>GPS Maps</title>
+	</head>
+	<body>
+		<div id="map" style="width:90%;height:1000px;"></div>
+		<!-- <script type="text/javascript" src="//apis.daum.net/maps/maps3.js?apikey=APIKEY&libraries=services"></script> -->
+		<script type="text/javascript" src="//apis.daum.net/maps/maps3.js?apikey=82efa9caba9af3640b436747196453bc"></script>
+		<script language="JavaScript">
+			//setTimeout("history.go(0);",5000);
+			var latitude = <?=$latitude?>;
+			var longitude = <?=$longitude?>;
+			console.log(latitude);
+			console.log(longitude);
+
+			var container = document.getElementById('map');
+			var options = {
+				center: new daum.maps.LatLng(latitude, longitude),
+				level: 1
+			};
+			var map = new daum.maps.Map(container, options);
+			// 마커가 표시될 위치입니다
+			var markerPosition  = new daum.maps.LatLng(latitude, longitude);
+			// 마커를 생성합니다
+			var marker = new daum.maps.Marker({
+			position: markerPosition
+			});
+			// 마커가 지도 위에 표시되도록 설정합니다
+			marker.setMap(map);
+		
+		</script>
+	</body>
+</html>
+
+<?php include "footer.php" ?>
