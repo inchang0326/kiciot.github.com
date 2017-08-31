@@ -144,7 +144,7 @@ def navigation(i) :
 	# 전체 좌표 변환
 	inProj = Proj(init = 'epsg:3857')
 	outProj = Proj(init = 'epsg:4326')
-	transformed_lon, transformed_lat = transform(inProj, outProj, points_lon, points_lat)
+	transformed_lon, transformed_lat = transform(inProj, outProj, accumulated_lon, accumulated_lat)
 
 	lonlat1 = (current_lon, current_lat)
 	lonlat2 = (transformed_lon, transformed_lat)
@@ -179,7 +179,7 @@ def looper(i):
 	d = 0
 	d = navigation(i)
 	
-	if size_lon > i :
+	if allThings_size > i :
 		if d == 1 :
                     nothing = 0
 		
