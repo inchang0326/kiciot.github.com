@@ -46,7 +46,7 @@ def getWeather() :
     url = "http://apis.skplanetx.com/weather/forecast/3days?version=1&lat="+lat+"&lon="+lon+"&appKey=0416be7c-5761-3931-8698-e95845d8f850"
     request = urllib.urlopen(url)
     data = json.loads(request.read().decode('utf-8'))
-    future_weather = data["weather"]["forecast3days"][0]["fcst3hour"]["sky"]["code10hour"]
+    #future_weather = data["weather"]["forecast3days"][0]["fcst3hour"]["sky"]["code10hour"]
     return {'current_weather': str(currentSkyCodeFilter(current_weather)), 'future_weather': str(futureSkyCodeFilter(future_weather))}
     
 # Filter current sky code
@@ -89,7 +89,7 @@ def futureSkyCodeFilter(x) :
         
 if __name__ == '__main__':
     getGPSInfo()
-    getAddress()
+    #getAddress()
     getWeather()
     print "latitude  : "+lat+"\n"+"longitude : "+lon
     print "Address   : " + address

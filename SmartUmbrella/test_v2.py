@@ -8,7 +8,6 @@ import threading             # THREADING
 import getWeather as weather	# Weather API
 from neopixel import *		     # LED Strip
 from adxl345 import ADXL345	 # Acceleration sensor
-import getInternet as ap     # Access Point
 
 GPIO.setwarnings(False)
 
@@ -111,7 +110,7 @@ def isDetected() :
         while True :
                 print "isDetected()"
                 pir_state = GPIO.input(pir_sensor)
-                time.sleep(2)   
+                time.sleep(2)
     
 # function1 thread starts as a daemon
 function1 = threading.Thread(target= isDetected)
@@ -126,8 +125,7 @@ def isConnected() :
             return True
         except urllib2.URLError as err :
             return False
-
-
+        
 # Define a function which gets the weather condtion
 def getWeather() :
         print "getWeather()"
@@ -135,13 +133,14 @@ def getWeather() :
         global future_weather
         status = weather.getWeather()
         current_weather = status['current_weather']
-        future_weather = status['future_weather']
+#        future_weather = status['future_weather']
 
 # Define a function which gets the weather constantly in a thread
 def weatherForecast() :
         global first_internet_check
+        print "weatherForecast()"
         while True :
-            print "weatherForecast()"
+            global first_internet_check
             # Check the internet connction
             if isConnected() :
                 # If it's connected then get the weather status

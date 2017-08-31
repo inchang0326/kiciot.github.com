@@ -8,7 +8,7 @@ import threading             # THREADING
 import getWeather as weather	# Weather API
 from neopixel import *		     # LED Strip
 from adxl345 import ADXL345	 # Acceleration sensor
-import getInternet as ap     # Access Point
+import os                    # OS
 
 GPIO.setwarnings(False)
 
@@ -16,12 +16,10 @@ GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 pir_sensor = 21
 pir_state = 0
-curr_state = 0
 GPIO.setup(pir_sensor, GPIO.IN)
 
 current_weather = ""
 future_weather = ""
-first_internet_check = 0
 
 potentiometer_adc = 0; # 10k trim pot connected to adc #0
 # SPI port on the ADC to the Cobbler
@@ -101,17 +99,16 @@ def isUsed() :
         forces = measureForce()
         print "isUsed()\t[ Z Acceleration : %.3fG ]" % ( axes['z'] )
         print "isUsed()\t[ F sensitivity  : %d ]" % ( forces )
-        if float(axes['z']) > 0.8 and forces < 10 :
+        if float(axes['z']) > 0.7 and forces < 10 :
             return False
         else : return True
     
 # Define a function which checks if motion is detected or not
 def isDetected() :
-        global pir_state
-        while True :
-                print "isDetected()"
-                pir_state = GPIO.input(pir_sensor)
-                time.sleep(2)   
+        print "isDetected()"
+        curr_state = GPIO.input(pir_sensor)
+        if curr_state : return True
+        else : return False
     
 # function1 thread starts as a daemon
 function1 = threading.Thread(target= isDetected)
@@ -126,8 +123,7 @@ def isConnected() :
             return True
         except urllib2.URLError as err :
             return False
-
-
+        
 # Define a function which gets the weather condtion
 def getWeather() :
         print "getWeather()"
@@ -139,15 +135,13 @@ def getWeather() :
 
 # Define a function which gets the weather constantly in a thread
 def weatherForecast() :
-        global first_internet_check
+        print "weatherForecast()"
         while True :
-            print "weatherForecast()"
             # Check the internet connction
             if isConnected() :
                 # If it's connected then get the weather status
                 getWeather()
                 # In addtion, sleep for an hour
-                first_internet_check = 1
                 time.sleep(3600)
                 print "weatherForecast() : Escaped!"
             else :
@@ -179,7 +173,7 @@ if __name__ == '__main__':
                     print "main()\t\t[ Motion detecting.. ]"
                     time.sleep(0)
                     # print curr_state # log
-                    if pir_state and first_internet_check :
+                    if isDetected() :
                         print "main()\t\t[ Motion detected! ]"
                         # if it rains at the moment
                         if current_weather == str(1) :
@@ -200,12 +194,13 @@ if __name__ == '__main__':
                                     colorWipe(strip, Color(0, 255, 0))
                                     time.sleep(0.2)
                                     colorWipe(strip, Color(0, 0, 0))
-                        if curr_state == 0 :
-                            curr_state = 1       
+                        if pir_state == 0 :
+                            pir_state = 1       
                     else :
-                        if curr_state == 1 :
+                        if pir_state == 1 :
                             print "main()\t\t[ Motion ended! ]"
-                            curr_state = 0
+                            pir_state = 0
+                
         except KeyboardInterrupt :
 	    print "Finished!"
             GPIO.cleanup()
