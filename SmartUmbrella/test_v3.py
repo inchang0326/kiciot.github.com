@@ -18,9 +18,6 @@ pir_sensor = 21
 pir_state = 0
 curr_state = 0
 GPIO.setup(pir_sensor, GPIO.IN)
-button = 10
-button_state = 0
-GPIO.setup(button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 current_weather = ""
 future_weather = ""
@@ -164,25 +161,8 @@ function2 = threading.Thread(target= weatherForecast)
 function2.daemon = True
 function2.start()
 
-#Define a function which checks the button state
-def checkButton() :
-    global button
-    global button_state
-    while True :
-        if GPIO.input(button) == False :
-            print "Button Pressed"
-            if button_state == 0 :
-                button_state = 1
-            else :
-                button_state = 0
-
-# function3 thread starts as a daemon
-function3 = threading.Thread(target= checkButton)
-function3.daemon = True
-function3.start()
-
 # Main program logic follows:
-if __name__ == '__main__':
+def main() :
         try :
             print "main()"
             # Create NeoPixel object with appropriate configuration.
@@ -192,14 +172,12 @@ if __name__ == '__main__':
             time.sleep(2)
             
             while True:
+                global curr_state
                 taken = isUsed()
 		if taken == True : 
 		    print "main()\t\t[ Umbrella is being moved ]"
-		    time.sleep(0.1)
-                    if button_state == 1 :
-                        navigation = navi.main()
-                    else :
-                        navigation = navi.printOFF()
+                    navigation = navi.main()
+                    time.sleep(0.1)
                 else :
                     print "main()\t\t[ Motion detecting.. ]"
                     time.sleep(0)
@@ -235,3 +213,5 @@ if __name__ == '__main__':
 	    print "Finished!"
             GPIO.cleanup()
         
+if __name__ == '__main__':
+        main()

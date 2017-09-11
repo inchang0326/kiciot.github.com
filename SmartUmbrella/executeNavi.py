@@ -1,5 +1,6 @@
 #-*- coding: utf-8 -*-
 
+import RPi.GPIO as GPIO
 import math
 import time
 import Adafruit_GPIO.SPI as SPI
@@ -9,6 +10,15 @@ from PIL import ImageDraw
 from PIL import ImageFont
 import getGPS as gps
 from pyproj import Proj, transform
+import test_v3 as test
+
+GPIO.setwarnings(False)
+
+# Global variables
+GPIO.setmode(GPIO.BCM)
+button = 10
+flag = 0
+GPIO.setup(button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 # Raspberry Pi pin configuration:
 RST = 24
@@ -97,10 +107,10 @@ def bearingP1toP2(lonlat1, lonlat2):
 		true_bearing = radian_bearing*(180.0/3.141592)
 	
 	if true_bearing > 0 :
-		print(true_bearing)	
+                print(true_bearing)
 	if true_bearing > 20 and true_bearing <=70 :
 		#print("북동쪽")
-		draw.text((x,top+30),u"    <<북동쪽>",font=font, fill=255)
+		draw.text((x,top+30),u"    <<북동쪽>>",font=font, fill=255)
 	elif true_bearing > 70 and true_bearing < 110 :
 		#print("동쪽")
 		draw.text((x,top+30),u"    <<동쪽>>",font=font, fill=255)
@@ -127,9 +137,13 @@ def bearingP1toP2(lonlat1, lonlat2):
 # Size of the set includes all info such as GPS and desc
 allThings_size = 0
 
+# Previous Index
+prev_index = 0
+
 # A function for printing navigation description and bearing value on the display
 def navigation(i) :
 	global allThings_size
+	global prev_index
 	# 현재 좌표
 	current_GPS = gps.getGPSInfo()
 	current_lat = current_GPS['latitude']
@@ -160,6 +174,9 @@ def navigation(i) :
   		part1 = original[0:length/2]
   		part2 = original[length/2:length]
   		
+  		if prev_index != i :
+                    disp.clear()
+                    disp.display()
   		draw.text((x,top),unicode(part1), font=font, fill=255)
                 draw.text((x, top+15), unicode(part2), font=font, fill=255)
                
@@ -167,14 +184,24 @@ def navigation(i) :
                 disp.image(image)
                 disp.display()
   		bearingP1toP2(lonlat1, lonlat2)
+  		prev_index = i 
   		return 1
   	
   	else : return 0
 
 # A function for looping the navigation function
 def looper(i):
+        global flag
         global allThings_size
-	time.sleep(2)
+        if flag == 1 :
+            time.sleep(2)
+            flag = 0
+        else :
+            time.sleep(0.1)
+        
+        if GPIO.input(button) == False :
+            printOFF()
+            test.main()
 	
 	d = 0
 	d = navigation(i)
@@ -184,49 +211,25 @@ def looper(i):
                     nothing = 0
 		
 		else:
-		    i=i+1
+		    i=i+1	    
+                
+                looper(i)
 		
-		looper(i)
-
+# A function to display "off"
+def printOFF() :
+    time.sleep(1)
+    disp.clear()
+    disp.display()
+    
 # A main function to start looper method
 def main() :
-	looper(0)
-
+    global button
+    global flag
+    if GPIO.input(button) == False :
+        print "Navi()\t\t[ Button Pressed ]"
+        flag = flag + 1
+        looper(0)
+        
 if __name__ == "__main__":
 	main()
 
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
